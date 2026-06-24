@@ -557,9 +557,22 @@ export function generateCompareHtml(images: string[]): string {
   function showPostFailure(feedback) {
     disableAllInputs();
     var json = JSON.stringify(feedback, null, 2);
+    // Belt-and-suspenders: download the feedback as a file so it survives even
+    // with no server and even if the user never copies it.
+    var downloaded = false;
+    try {
+      var blob = new Blob([json], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'feedback.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      downloaded = true;
+    } catch (e) { /* download blocked — copyable block below still works */ }
     document.getElementById('success-msg').style.display = 'block';
     document.getElementById('success-msg').innerHTML =
-      '<div style="color:#c00;margin-bottom:8px;">Connection lost. Copy your feedback below and paste it in your coding agent:</div>' +
+      '<div style="color:#c00;margin-bottom:8px;">This board has no live server, so it could not auto-save your feedback.' +
+      (downloaded ? ' It was downloaded as <code>feedback.json</code> — drop it next to the board, or' : '') +
+      ' copy the feedback below and paste it to your coding agent:</div>' +
       '<pre style="text-align:left;background:#f5f5f5;padding:12px;border-radius:4px;font-size:12px;overflow-x:auto;cursor:pointer;" onclick="navigator.clipboard.writeText(this.textContent)">' +
       json.replace(/</g, '&lt;') + '</pre>' +
       '<small style="color:#666;">Click to copy</small>';
@@ -592,9 +605,10 @@ export function generateCompareHtml(images: string[]): string {
       } else if (hasServer()) {
         showPostFailure(feedback);
       } else {
-        // DOM-only mode (legacy / test)
-        document.getElementById('submit-btn').disabled = true;
-        document.getElementById('success-msg').style.display = 'block';
+        // No server (board opened as a file://): never claim "submitted" while
+        // the feedback is trapped in the DOM. Surface it losslessly instead —
+        // download feedback.json + show copyable JSON.
+        showPostFailure(feedback);
       }
     });
   });
