@@ -1313,6 +1313,29 @@ git push -u origin <branch-name>
 > **STOP.** Before syncing docs and creating or updating the PR/MR (Steps 18-19), Read `~/.claude/skills/gstack/ship/sections/pr-body.md` and execute it
 > in full. Do not work from memory — that section is the source of truth for this step.
 
+## Step 19.5: Archive branch + merge (squash-merge repos)
+
+Push a permanent archive tag pointing to the branch tip before any merge+delete. This preserves the full commit history even when squash-merging, so you can always recover or bisect within the branch later.
+
+```bash
+_BRANCH=$(git branch --show-current)
+_TIP=$(git rev-parse HEAD)
+git tag "archive/$_BRANCH" "$_TIP"
+git push origin "archive/$_BRANCH"
+```
+
+This is always automatic — no confirmation needed. The tag is cheap and harmless.
+
+**For SOLO repos (`REPO_MODE: solo`) after CI passes:** merge the PR with squash and delete the remote branch:
+
+```bash
+gh pr merge --squash --delete-branch
+```
+
+**For COLLABORATIVE repos (`REPO_MODE: collaborative`):** do NOT auto-merge. The archive tag is already pushed. Tell the user: "Branch archived as `archive/$_BRANCH`. Merge when approved."
+
+---
+
 ## Step 20: Persist ship metrics
 
 Log coverage and plan completion data so `/retro` can track trends:
